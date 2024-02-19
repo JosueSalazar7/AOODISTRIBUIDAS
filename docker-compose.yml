@@ -11,7 +11,7 @@ services:
     command: "--server-id=1 --log-bin=mysql-bin --binlog-do-db=wordpress"
     environment:
       MYSQL_ROOT_PASSWORD: A123456
-      MYSQL_DATABASE: dbmaster
+      MYSQL_DATABASE: wordpress
     ports:
       - "3307:3306" 
     networks:
@@ -23,14 +23,14 @@ services:
     command: "--server-id=2 --log-bin=mysql-bin --binlog-do-db=wordpress"
     environment:
       MYSQL_ROOT_PASSWORD: A123456
-      MYSQL_DATABASE: dbslave
+      MYSQL_DATABASE: wordpress
     networks:
       - wordpress_network
     depends_on:
       - mysql_master
 
   wordpress1:
-    image: wordpress
+    image: wordpress:latest
     container_name: wordpress1
     depends_on:
       - mysql_master
@@ -40,7 +40,7 @@ services:
       - wordpress_network
 
   wordpress2:
-    image: wordpress
+    image: wordpress:latest
     container_name: wordpress2
     depends_on:
       - mysql_master
@@ -50,7 +50,7 @@ services:
       - wordpress_network
 
   wordpress3:
-    image: wordpress
+    image: wordpress:latest
     container_name: wordpress3
     depends_on:
       - mysql_master
@@ -80,8 +80,3 @@ services:
     environment:
       PMA_HOSTS: mysql_master, mysql_slave
       MYSQL_ROOT_PASSWORD: 12345
-    depends_on:
-      - mysql_master
-      - mysql_slave
-    networks:
-      - wordpress_network
