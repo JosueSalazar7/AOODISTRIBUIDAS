@@ -1,82 +1,81 @@
-version: '3'
-
-networks:
-  wordpress_network:
-    driver: bridge
-
+version: '1'
 services:
-  mysql_master:
-    image: mysql:latest
-    container_name: mysql_master
-    command: "--server-id=1 --log-bin=mysql-bin --binlog-do-db=wordpress"
-    environment:
-      MYSQL_ROOT_PASSWORD: A123456
-      MYSQL_DATABASE: wordpress
-    ports:
-      - "3307:3306" 
-    networks:
-      - wordpress_network
-
-  mysql_slave:
-    image: mysql:latest
-    container_name: mysql_slave
-    command: "--server-id=2 --log-bin=mysql-bin --binlog-do-db=wordpress"
-    environment:
-      MYSQL_ROOT_PASSWORD: A123456
-      MYSQL_DATABASE: wordpress
-    networks:
-      - wordpress_network
-    depends_on:
-      - mysql_master
-
-  wordpress1:
-    image: wordpress:latest
-    container_name: wordpress1
-    depends_on:
-      - mysql_master
-    ports:
-      - "81:80"
-    networks:
-      - wordpress_network
-
-  wordpress2:
-    image: wordpress:latest
-    container_name: wordpress2
-    depends_on:
-      - mysql_master
-    ports:
-      - "82:80"
-    networks:
-      - wordpress_network
-
-  wordpress3:
-    image: wordpress:latest
-    container_name: wordpress3
-    depends_on:
-      - mysql_master
-    ports:
-      - "83:80"
-    networks:
-      - wordpress_network
-
   nginx:
-    image: nginx:stable-alpine
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - 80:80
     depends_on:
       - wordpress1
       - wordpress2
       - wordpress3
-    networks:
-      - wordpress_network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+
+  mysql_master:
+    image: mysql:latest
+    container_name: mysql_master
+    command: --server-id=1 --log-bin=mysql-bin --binlog-do-db=replica --bind-address=0.0.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: replica
+    ports:
+      - "3307:3306"  # Cambiado el mapeo del puerto
+
+  mysql_slave:
+    image: mysql:latest
+    container_name: mysql_slave
+    command: --server-id=2 --log-bin=mysql-bin --binlog-do-db=replica
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: replica
+    ports:
+      - "3308:3306"  # Se cambió el puerto externo a 3307
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: phpmyadmin
+    environment:
+      PMA_HOSTS: "mysql_master,mysql_slave"
+      PMA_ARBITRARY: 1 
+    depends_on:
+      - mysql_master
+      - mysql_slave
     ports:
       - "8081:80"
+
+  wordpress1:
+    image: wordpress:latest
+    container_name: wordpress1
+    ports:
+      - "8082:80"
     environment:
-      PMA_HOSTS: mysql_master, mysql_slave
-      MYSQL_ROOT_PASSWORD: 12345
+      - WORDPRESS_DB_HOST=mysql_master
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=root
+      - WORDPRESS_DB_NAME=replica
+      - WORDPRESS_TABLE_PREFIX=wp1_
+
+  wordpress2:
+    image: wordpress:latest
+    container_name: wordpress2
+    ports:
+      - "8083:80"
+    environment:
+      - WORDPRESS_DB_HOST=mysql_master
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=root
+      - WORDPRESS_DB_NAME=replica
+      - WORDPRESS_TABLE_PREFIX=wp2_
+   
+  wordpress3:
+    image: wordpress:latest
+    container_name: wordpress3
+    ports:
+      - "8084:80"
+    environment:
+      - WORDPRESS_DB_HOST=mysql_master
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=root
+      - WORDPRESS_DB_NAME=replica
+      - WORDPRESS_TABLE_PREFIX=wp3_
